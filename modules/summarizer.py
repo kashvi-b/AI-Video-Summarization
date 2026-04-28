@@ -1,11 +1,12 @@
 import requests
 from modules.chunker import chunk_text
 
+# ── Config ─────────────────────────────────────────────
 OLLAMA_URL = "http://localhost:11434/api/generate"
 DEFAULT_MODEL = "llama3:latest"
 
 
-# ── Connection check ─────────────────────────────────────────
+# ── Connection check ───────────────────────────────────
 def check_ollama_connection():
     try:
         requests.get("http://localhost:11434")
@@ -14,7 +15,7 @@ def check_ollama_connection():
         return False
 
 
-# ── Get available models ─────────────────────────────────────
+# ── Get available models ───────────────────────────────
 def get_available_models():
     try:
         res = requests.get("http://localhost:11434/api/tags")
@@ -24,7 +25,7 @@ def get_available_models():
         return []
 
 
-# ── Core LLM call ────────────────────────────────────────────
+# ── Core LLM call ──────────────────────────────────────
 def _call_ollama(prompt, model=DEFAULT_MODEL):
     response = requests.post(
         OLLAMA_URL,
@@ -37,40 +38,56 @@ def _call_ollama(prompt, model=DEFAULT_MODEL):
     return response.json().get("response", "")
 
 
-# ── Prompt ───────────────────────────────────────────────────
-def _summary_prompt(text):
-    return f"""
-Summarize the following video transcript clearly and concisely:
-
-{text}
-
-Summary:
-"""
-
-
-# ── Main summarization ───────────────────────────────────────
+# ── Summary ────────────────────────────────────────────
 def summarize(text, model=DEFAULT_MODEL):
     chunks = chunk_text(text)
 
     # If short text
     if len(chunks) == 1:
-        return _call_ollama(_summary_prompt(chunks[0]), model)
+        return _call_ollama(
+            f"Summarize the following text clearly:\n\n{text}",
+            model
+        )
 
     # Step 1: summarize each chunk
     partial_summaries = []
     for chunk in chunks:
-        s = _call_ollama(_summary_prompt(chunk), model)
-        partial_summaries.append(s)
+        summary = _call_ollama(
+            f"Summarize:\n\n{chunk}",
+            model
+        )
+        partial_summaries.append(summary)
 
     # Step 2: merge summaries
     combined = "\n\n".join(partial_summaries)
 
-    final_prompt = f"""
-You are given partial summaries of a video:
+    final_summary = _call_ollama(
+        f"Combine these summaries into one concise summary:\n\n{combined}",
+        model
+    )
 
-{combined}
+    return final_summary
 
-Combine them into one clean, concise summary.
+
+# ── Key Points ─────────────────────────────────────────
+def get_key_points(text, model=DEFAULT_MODEL):
+    prompt = f"""
+Extract 5–8 important key points from this video transcript:
+
+{text}
+
+Return only bullet points.
 """
+    return _call_ollama(prompt, model)
 
-    return _call_ollama(final_prompt, model)
+
+# ── Explain Like I'm 5 ─────────────────────────────────
+def explain_simple(text, model=DEFAULT_MODEL):
+    prompt = f"""
+Explain this in a very simple way (like I'm 5 years old):
+
+{text}
+
+Use short sentences and simple words.
+"""
+    return _call_ollama(prompt, model)

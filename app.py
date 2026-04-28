@@ -81,10 +81,11 @@ if result:
         st.markdown("---")
 
         # Tabs
-        tab1, tab2, tab3 = st.tabs([
+        tab1, tab2, tab3, tab4 = st.tabs([
             "📋 Summary",
-            "⏱️ Timestamps",
-            "💬 Chat"
+            "📌 Key Points",
+            "🧠 Explain Like I'm 5",
+            "⏱️ Timestamps"
         ])
 
         # ── Summary ───────────────────────────────────────────
@@ -92,14 +93,19 @@ if result:
             st.subheader("📋 Summary")
             st.write(result["summary"])
 
-        # ── Timestamps ────────────────────────────────────────
+        # ── Key Points ────────────────────────────────────────
         with tab2:
-            st.subheader("⏱️ Timestamp Summaries")
-            st.info("Coming soon...")
+            st.subheader("📌 Key Points")
+            st.write(result["key_points"])
 
-        # ── Chat ──────────────────────────────────────────────
+        # ── ELi5 ──────────────────────────────────────────────
         with tab3:
-            st.subheader("💬 Chat with Video")
+            st.subheader("🧠 Explain Like I'm 5")
+            st.write(result["eli5"])
+        
+        #___ Timestamps________________________________________
+        with tab4:
+            st.subheader("⏱️ Timestamp Summaries")
             st.info("Coming soon...")
 
         # ── Transcript ────────────────────────────────────────
