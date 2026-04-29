@@ -1,6 +1,7 @@
 import streamlit as st
 from modules.pipeline import run_pipeline
 from modules.summarizer import check_ollama_connection, get_available_models
+from modules.qa import chat_with_video
 
 # ── Page config ──────────────────────────────────────────────
 st.set_page_config(
@@ -9,13 +10,12 @@ st.set_page_config(
     layout="wide",
 )
 
-# ── Title ────────────────────────────────────────────────────
 st.title("🎬 AI Video Summarizer Pro")
-st.caption("Powered by Ollama — 100% free & local")
+st.caption("Powered by Ollama + RAG")
 
 # ── Check Ollama ─────────────────────────────────────────────
 if not check_ollama_connection():
-    st.error("⚠️ Ollama is not running.\n\nRun:\n\n`ollama serve`")
+    st.error("⚠️ Ollama is not running. Run: `ollama serve`")
     st.stop()
 
 # ── Sidebar ──────────────────────────────────────────────────
@@ -25,31 +25,23 @@ with st.sidebar:
     models = get_available_models()
 
     if not models:
-        st.error("❌ No models found.\n\nRun:\n\n`ollama pull llama3`")
+        st.error("❌ No models found. Run: `ollama pull llama3`")
         st.stop()
 
-    # Clean display (remove :latest)
+    # Clean model names
     display_models = [m.split(":")[0] for m in models]
     model_map = dict(zip(display_models, models))
 
     selected_display = st.selectbox("🤖 Model", display_models)
     model = model_map[selected_display]
 
-    language = st.text_input("🌐 Transcript Language", value="en")
+    language = st.text_input("🌍 Output Language", value="English")
 
     st.markdown("---")
-    st.markdown("### ℹ️ Instructions")
-    st.markdown("""
-    1. Paste a YouTube link  
-    2. Click **Analyze Video**  
-    3. Wait for results  
-    """)
+    st.markdown("Paste a YouTube link and click analyze")
 
 # ── Input ────────────────────────────────────────────────────
-url = st.text_input(
-    "🔗 Enter YouTube URL",
-    placeholder="https://youtube.com/watch?v=..."
-)
+url = st.text_input("🔗 Enter YouTube URL")
 
 run_btn = st.button("🚀 Analyze Video", use_container_width=True)
 
@@ -62,7 +54,7 @@ if run_btn:
     if not url:
         st.warning("⚠️ Please enter a YouTube URL")
     else:
-        with st.spinner("⏳ Processing video..."):
+        with st.spinner("⏳ Processing... This may take a few seconds"):
             result = run_pipeline(url, model=model, language=language)
             st.session_state.result = result
 
@@ -70,44 +62,73 @@ if run_btn:
 result = st.session_state.result
 
 if result:
+    # ❌ If pipeline failed
     if not result["success"]:
-        st.error(f"❌ {result['error']}")
+        st.error(result["error"])
+
+    # ✅ If success
     else:
-        # Metrics
-        col1, col2 = st.columns(2)
-        col1.metric("🧩 Chunks", len(result["chunks"]["text_chunks"]))
-        col2.metric("⏱️ Segments", len(result["transcript"]["segments"]))
+        st.success("✅ Analysis Complete")
 
-        st.markdown("---")
+        # Optional info
+        st.info(f"🧩 Chunks: {len(result['chunks']['text_chunks'])}")
 
-        # Tabs
-        tab1, tab2, tab3, tab4 = st.tabs([
+        # ── Tabs ───────────────────────────────────────────
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
             "📋 Summary",
             "📌 Key Points",
-            "🧠 Explain Like I'm 5",
-            "⏱️ Timestamps"
+            "🧠 ELI5",
+            "⏱️ Timestamps",
+            "💬 Chat"
         ])
 
-        # ── Summary ───────────────────────────────────────────
+        # ── Summary ───────────────────────────────────────
         with tab1:
             st.subheader("📋 Summary")
             st.write(result["summary"])
 
-        # ── Key Points ────────────────────────────────────────
+            st.subheader("🌍 Translated Summary")
+            st.write(result["translated_summary"])
+
+        # ── Key Points ────────────────────────────────────
         with tab2:
             st.subheader("📌 Key Points")
             st.write(result["key_points"])
 
-        # ── ELi5 ──────────────────────────────────────────────
+        # ── ELI5 ──────────────────────────────────────────
         with tab3:
             st.subheader("🧠 Explain Like I'm 5")
             st.write(result["eli5"])
-        
-        #___ Timestamps________________________________________
+
+        # ── Timestamps ───────────────────────────────────
         with tab4:
             st.subheader("⏱️ Timestamp Summaries")
-            st.info("Coming soon...")
 
-        # ── Transcript ────────────────────────────────────────
-        with st.expander("📄 View Raw Transcript"):
+            for t in result["timestamps"]:
+                st.write(f"**{int(t['time'])} sec:** {t['summary']}")
+
+        # ── Chat with Video ──────────────────────────────
+        with tab5:
+            st.subheader("💬 Chat with Video")
+
+            with st.form("chat_form"):
+                question = st.text_input("Ask a question about the video")
+                submit = st.form_submit_button("Ask")
+
+            if submit:
+                if not question:
+                    st.warning("Please enter a question")
+                elif result["rag"]["index"] is None:
+                    st.error("Chat unavailable (vector store failed)")
+                else:
+                    answer = chat_with_video(
+                        question,
+                        result["rag"]["chunks"],
+                        result["rag"]["index"],
+                        model
+                    )
+                    st.write(answer)
+
+        # ── Transcript ────────────────────────────────────
+        with st.expander("📄 View Full Transcript"):
             st.text(result["transcript"]["text"])
