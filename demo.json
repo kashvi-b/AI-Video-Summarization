@@ -1,0 +1,30 @@
+{
+  "success": true,
+  "summary": "This video explains the fundamentals of Python programming including variables, loops, functions, and basic syntax. It walks beginners through practical examples and helps them understand how to write simple Python programs.",
+  "key_points": "- Python is beginner-friendly\n- Variables store data\n- Loops automate repetition\n- Functions organize code\n- Syntax is simple and readable",
+  "eli5": "Python is like giving instructions to a computer in simple English. You tell it what to do step by step, like a recipe.",
+  "translated_summary": "This video explains basic Python programming concepts in simple terms.",
+  "timestamps": [
+    {"time": 0, "summary": "Introduction to Python"},
+    {"time": 30, "summary": "Variables and data types"},
+    {"time": 60, "summary": "Loops explained"},
+    {"time": 90, "summary": "Functions overview"}
+  ],
+  "rag": {
+    "chunks": [
+      "Python is easy to learn",
+      "Variables store values",
+      "Loops repeat actions",
+      "Functions help reuse code"
+    ],
+    "index": null
+  },
+  "transcript": {
+    "text": "Python is easy to learn. Variables store values. Loops repeat actions. Functions help reuse code.",
+    "segments": []
+  },
+  "chunks": {
+    "text_chunks": ["Python basics content"],
+    "token_count": 100
+  }
+}

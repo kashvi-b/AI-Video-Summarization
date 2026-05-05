@@ -1,4 +1,6 @@
 import streamlit as st
+import json
+
 from modules.pipeline import run_pipeline
 from modules.summarizer import check_ollama_connection, get_available_models
 from modules.qa import chat_with_video
@@ -28,7 +30,6 @@ with st.sidebar:
         st.error("❌ No models found. Run: `ollama pull llama3`")
         st.stop()
 
-    # Clean model names
     display_models = [m.split(":")[0] for m in models]
     model_map = dict(zip(display_models, models))
 
@@ -38,7 +39,13 @@ with st.sidebar:
     language = st.text_input("🌍 Output Language", value="English")
 
     st.markdown("---")
-    st.markdown("Paste a YouTube link and click analyze")
+    st.markdown("Paste a YouTube link or use demo mode")
+
+# ── Demo Button (IMPORTANT) ───────────────────────────────────
+if st.button("🎥 Load Demo (Guaranteed Working)"):
+    with open("demo.json") as f:
+        st.session_state.result = json.load(f)
+    st.success("✅ Demo Loaded")
 
 # ── Input ────────────────────────────────────────────────────
 url = st.text_input("🔗 Enter YouTube URL")
@@ -49,6 +56,9 @@ run_btn = st.button("🚀 Analyze Video", use_container_width=True)
 if "result" not in st.session_state:
     st.session_state.result = None
 
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
 # ── Run pipeline ──────────────────────────────────────────────
 if run_btn:
     if not url:
@@ -57,23 +67,22 @@ if run_btn:
         with st.spinner("⏳ Processing... This may take a few seconds"):
             result = run_pipeline(url, model=model, language=language)
             st.session_state.result = result
+            st.session_state.chat_history = []  # reset chat on new video
 
 # ── Display results ───────────────────────────────────────────
 result = st.session_state.result
 
 if result:
-    # ❌ If pipeline failed
+    # ❌ Failure
     if not result["success"]:
         st.error(result["error"])
 
-    # ✅ If success
+    # ✅ Success
     else:
         st.success("✅ Analysis Complete")
 
-        # Optional info
         st.info(f"🧩 Chunks: {len(result['chunks']['text_chunks'])}")
 
-        # ── Tabs ───────────────────────────────────────────
         tab1, tab2, tab3, tab4, tab5 = st.tabs([
             "📋 Summary",
             "📌 Key Points",
@@ -103,11 +112,10 @@ if result:
         # ── Timestamps ───────────────────────────────────
         with tab4:
             st.subheader("⏱️ Timestamp Summaries")
-
             for t in result["timestamps"]:
                 st.write(f"**{int(t['time'])} sec:** {t['summary']}")
 
-        # ── Chat with Video ──────────────────────────────
+        # ── Chat with memory ─────────────────────────────
         with tab5:
             st.subheader("💬 Chat with Video")
 
@@ -118,8 +126,10 @@ if result:
             if submit:
                 if not question:
                     st.warning("Please enter a question")
+
                 elif result["rag"]["index"] is None:
-                    st.error("Chat unavailable (vector store failed)")
+                    st.info("Demo mode: Chat disabled")
+
                 else:
                     answer = chat_with_video(
                         question,
@@ -127,7 +137,16 @@ if result:
                         result["rag"]["index"],
                         model
                     )
-                    st.write(answer)
+
+                    st.session_state.chat_history.append(("You", question))
+                    st.session_state.chat_history.append(("AI", answer))
+
+            # Display chat history
+            for role, msg in st.session_state.chat_history:
+                if role == "You":
+                    st.markdown(f"**🧑 You:** {msg}")
+                else:
+                    st.markdown(f"**🤖 AI:** {msg}")
 
         # ── Transcript ────────────────────────────────────
         with st.expander("📄 View Full Transcript"):
