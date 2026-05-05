@@ -41,15 +41,15 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("Paste a YouTube link or use demo mode")
 
-# ── Demo Button (IMPORTANT) ───────────────────────────────────
+# ── Demo Button ──────────────────────────────────────────────
 if st.button("🎥 Load Demo (Guaranteed Working)"):
     with open("demo.json") as f:
         st.session_state.result = json.load(f)
+    st.session_state.chat_history = []
     st.success("✅ Demo Loaded")
 
 # ── Input ────────────────────────────────────────────────────
 url = st.text_input("🔗 Enter YouTube URL")
-
 run_btn = st.button("🚀 Analyze Video", use_container_width=True)
 
 # ── Session state ─────────────────────────────────────────────
@@ -67,20 +67,17 @@ if run_btn:
         with st.spinner("⏳ Processing... This may take a few seconds"):
             result = run_pipeline(url, model=model, language=language)
             st.session_state.result = result
-            st.session_state.chat_history = []  # reset chat on new video
+            st.session_state.chat_history = []  # reset chat
 
 # ── Display results ───────────────────────────────────────────
 result = st.session_state.result
 
 if result:
-    # ❌ Failure
     if not result["success"]:
         st.error(result["error"])
 
-    # ✅ Success
     else:
         st.success("✅ Analysis Complete")
-
         st.info(f"🧩 Chunks: {len(result['chunks']['text_chunks'])}")
 
         tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -127,15 +124,13 @@ if result:
                 if not question:
                     st.warning("Please enter a question")
 
-                elif result["rag"]["index"] is None:
-                    st.info("Demo mode: Chat disabled")
-
                 else:
                     answer = chat_with_video(
                         question,
                         result["rag"]["chunks"],
                         result["rag"]["index"],
-                        model
+                        model,
+                        st.session_state.chat_history
                     )
 
                     st.session_state.chat_history.append(("You", question))
