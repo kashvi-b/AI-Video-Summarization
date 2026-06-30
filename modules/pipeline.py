@@ -6,7 +6,7 @@ from modules.summarizer import (
     summarize,
     get_key_points,
     explain_simple,
-    _call_ollama
+    _call_gemini
 )
 from modules.chunker import chunk_text
 from modules.qa import build_vector_store
@@ -62,7 +62,7 @@ def run_pipeline(url, model, language):
             index = None
 
         # ── Step 6: Translation ───────────────────────────
-        translated_summary = _call_ollama(
+        translated_summary = _call_gemini(
             f"Translate this summary to {language}:\n\n{summary}",
             model
         )

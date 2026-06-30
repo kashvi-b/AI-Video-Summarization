@@ -1,7 +1,7 @@
 from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
-from modules.summarizer import _call_ollama
+from modules.summarizer import _call_gemini
 
 # Load embedding model
 embed_model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -52,4 +52,4 @@ Answer the user's question clearly.
 Question: {question}
 """
 
-    return _call_ollama(prompt, model_name)
+    return _call_gemini(prompt, model_name)

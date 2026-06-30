@@ -77,10 +77,6 @@ div.stButton > button {
 </style>
 """, unsafe_allow_html=True)
 
-# ── Check Ollama ─────────────────────────────────────────────
-if not check_ollama_connection():
-    st.error("⚠️ Ollama is not running. Run: `ollama serve`")
-    st.stop()
 
 # ── Session State ─────────────────────────────────────────────
 if "result" not in st.session_state:
@@ -101,12 +97,7 @@ with st.sidebar:
 
     st.markdown("### ⚙️ Settings")
 
-    models = get_available_models()
-    if not models:
-        st.error("❌ No models found. Run: `ollama pull llama3`")
-        st.stop()
-
-    model = st.selectbox("Model", models)
+    model = "gemini-2.5-flash"
     language = st.text_input("Language", "English")
 
     st.markdown("---")
